@@ -11,34 +11,34 @@ from services.circuit_breaker import (
 
 router = APIRouter()
 
-# Round Robin index
+
 load_balancer_index = {}
 
 
 @router.api_route("/{service}/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def gateway_handler(service: str, path: str, request: Request):
 
-    # 🔹 Check if service exists
+    
     if service not in ROUTES:
         return JSONResponse(status_code=404, content={"error": "Service not found"})
 
     service_list = ROUTES[service]
 
-    # 🔹 Initialize index
+   
     if service not in load_balancer_index:
         load_balancer_index[service] = 0
 
-    # 🔹 Select service (Round Robin)
+   
     index = load_balancer_index[service]
     target_base_url = service_list[index]
 
-    # 🔹 Update index
+ 
     load_balancer_index[service] = (index + 1) % len(service_list)
 
-    # 🔥 DEBUG: which service is being called
+  
     print(f"➡️ Calling: {target_base_url}")
 
-    # 🔥 Circuit Breaker Check
+ 
     if not is_service_available(target_base_url):
         return JSONResponse(
             status_code=503,
@@ -57,15 +57,15 @@ async def gateway_handler(service: str, path: str, request: Request):
                 timeout=2.0
             )
 
-        # ✅ Success → reset failure count
+  
         record_success(target_base_url)
 
         return JSONResponse(content=response.json())
 
     except Exception as e:
-        print(f"❌ FAILED: {target_base_url}")
+        print(f" FAILED: {target_base_url}")
 
-        # ❌ Record failure
+
         record_failure(target_base_url)
 
         return JSONResponse(

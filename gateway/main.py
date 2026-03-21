@@ -14,7 +14,7 @@ ALGORITHM = "HS256"
 
 app = FastAPI()
 
-# Middleware order
+
 app.middleware("http")(rate_limiter)
 app.middleware("http")(jwt_auth)
 app.middleware("http")(cache_middleware)
@@ -22,18 +22,18 @@ app.middleware("http")(log_requests)
 
 app.include_router(router)
 
-# Health check
+
 @app.get("/")
 def health_check():
     return {"status": "API Gateway Running"}
 
 
-# 🔐 Login endpoint (dummy)
+
 @app.post("/login")
 def login():
     payload = {
         "user": "admin",
-        "exp": time.time() + 3600  # 1 hour expiry
+        "exp": time.time() + 3600 
     }
 
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
