@@ -7,25 +7,24 @@ CACHE_TTL = 10  # seconds
 
 
 async def cache_middleware(request: Request, call_next):
-    # 🔥 Skip docs & login
+
     if request.url.path in ["/", "/docs", "/openapi.json", "/login"]:
         return await call_next(request)
 
     key = f"{request.method}:{request.url}"
 
-    # 🔥 Check Redis
+
     cached_data = redis_client.get(key)
 
     if cached_data:
-        print("🔥 REDIS CACHE HIT")
+
         return JSONResponse(content=json.loads(cached_data))
 
-    print("❌ REDIS CACHE MISS")
+    print(" REDIS CACHE MISS")
 
     # Call actual service
     response = await call_next(request)
 
-    # 🔥 Only cache GET + JSON responses
     if request.method == "GET":
         content_type = response.headers.get("content-type", "")
 
