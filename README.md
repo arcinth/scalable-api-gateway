@@ -1,21 +1,8 @@
 # Scalable API Gateway
 
-A production-style API Gateway built with **FastAPI** and **Redis**, designed to route requests across multiple microservices while providing authentication, caching, rate limiting, load balancing, and fault tolerance.
-
----
-
-## Overview
-
-Modern applications often consist of multiple services that need a single, secure entry point. This project demonstrates how an API Gateway can act as the central layer between clients and backend services while improving performance, reliability, and maintainability.
-
-The gateway handles:
-
-* Request routing
-* JWT authentication
-* Rate limiting
-* Redis caching
-* Round-robin load balancing
-* Circuit breaker fault tolerance
+A production-style API Gateway built with **FastAPI** and **Redis** that routes requests 
+across microservices with JWT authentication, rate limiting, caching, load balancing, 
+and circuit breaker fault tolerance.
 
 ---
 
@@ -23,64 +10,40 @@ The gateway handles:
 
 ```mermaid
 flowchart TD
-    A[Client Request] --> B[API Gateway]
+    A[Client Request] --> B[API Gateway :8000]
 
-    B --> C[JWT Authentication]
-    B --> D[Rate Limiting]
-    B --> E[Load Balancing]
-    B --> F[Redis Cache]
-    B --> G[Circuit Breaker]
+    B --> C[JWT Auth Middleware]
+    C --> D[Rate Limiter - Redis]
+    D --> E[Cache Check - Redis]
+    E --> F[Load Balancer - Round Robin]
+    F --> G[Circuit Breaker]
 
-    G --> H[User Service]
-    G --> I[Order Service]
+    G --> H[User Service :8001]
+    G --> I[User Service 2 :8003]
+    G --> J[Order Service :8002]
 
-    H --> J[Response]
-    I --> J
+    H --> K[Response]
+    I --> K
+    J --> K
+    K --> L[Cache Write - Redis]
 ```
 
-The API Gateway acts as a centralized entry point for all client requests. Before forwarding requests to backend services, it applies authentication, rate limiting, caching, and fault-tolerance mechanisms to improve security, performance, and reliability.
+The gateway is the single entry point for all client requests. Every request passes 
+through auth → rate limiting → cache check → load balancing → circuit breaker 
+before reaching a backend service. This layered approach means concerns are separated 
+and each layer can be modified independently.
 
 ---
 
-## Key Features
+## What It Does
 
-### JWT Authentication
-
-Secures protected endpoints using JSON Web Tokens.
-
-### Rate Limiting
-
-Prevents abuse by restricting excessive requests from clients.
-
-### Load Balancing
-
-Distributes traffic across multiple service instances using a round-robin strategy.
-
-### Redis Caching
-
-Reduces repeated service calls and improves response latency for frequently accessed endpoints.
-
-### Circuit Breaker
-
-Prevents cascading failures by temporarily blocking requests to unhealthy services.
-
-### Microservices Architecture
-
-Demonstrates communication between independent backend services through a centralized gateway.
-
----
-
-## Engineering Concepts Demonstrated
-
-* API Gateway Pattern
-* Microservices Communication
-* JWT Authentication
-* Redis Caching
-* Load Balancing
-* Rate Limiting
-* Circuit Breaker Pattern
-* Fault Tolerance
-* Backend System Design
+| Feature | Implementation | Why |
+|---|---|---|
+| Authentication | JWT middleware on protected routes | Stateless auth — no session store needed |
+| Rate Limiting | Redis atomic INCR + TTL per client IP | Consistent across multiple gateway instances |
+| Caching | Redis with configurable TTL per endpoint | Reduces backend load for read-heavy routes |
+| Load Balancing | Round-robin across service instances | Simple, predictable distribution |
+| Fault Tolerance | Circuit breaker per service | Prevents cascade failures to unhealthy services |
 
 ---
 
@@ -90,16 +53,17 @@ Demonstrates communication between independent backend services through a centra
 scalable-api-gateway/
 │
 ├── gateway/
-│   ├── main.py
-│   ├── auth.py
-│   ├── cache.py
-│   ├── load_balancer.py
-│   └── circuit_breaker.py
+│   ├── middleware/          # Auth and rate limiting middleware
+│   ├── utils/               # Shared utilities
+│   ├── config.py            # Gateway configuration
+│   ├── main.py              # Entry point
+│   └── router.py            # Request routing logic
 │
 ├── services/
-│   ├── user_service.py
-│   ├── user_service_2.py
-│   └── order_service.py
+│   ├── circuit_breaker.py   # Circuit breaker implementation
+│   ├── user_service.py      # User service (instance 1) :8001
+│   ├── user_service_2.py    # User service (instance 2) :8003
+│   └── order_service.py     # Order service :8002
 │
 ├── requirements.txt
 └── README.md
@@ -107,110 +71,103 @@ scalable-api-gateway/
 
 ---
 
-## Tech Stack
+## Setup
 
-* Python
-* FastAPI
-* Redis
-* JWT Authentication
-* Docker (Redis)
-* Uvicorn
+**Prerequisites:** Python 3.10+, Docker
 
----
-
-## Running the Project
-
-### 1. Install Dependencies
-
+**1. Install dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Start Redis
-
+**2. Start Redis**
 ```bash
 docker run -d -p 6379:6379 redis
 ```
 
-### 3. Start Services
-
+**3. Start backend services**
 ```bash
 python -m uvicorn services.user_service:app --port 8001
-
 python -m uvicorn services.user_service_2:app --port 8003
-
 python -m uvicorn services.order_service:app --port 8002
 ```
 
-### 4. Start API Gateway
-
+**4. Start the gateway**
 ```bash
 python -m uvicorn gateway.main:app --port 8000
 ```
 
----
-
-## Testing
-
-Open:
-
-```text
+**5. Open API docs**
+```
 http://localhost:8000/docs
 ```
-
-Steps:
-
-1. Generate a JWT token using `/login`
-2. Authorize using the generated token
-3. Access protected endpoints
-4. Observe request routing and caching behavior
+→ Generate a JWT token via `/login` → Authorize → Test protected endpoints
 
 ---
 
 ## Design Decisions
 
-### Why FastAPI?
+### Why Redis for both caching and rate limiting?
 
-Chosen for its high performance, automatic API documentation, and developer-friendly architecture.
+Two separate concerns, one infrastructure choice — intentional.
 
-### Why Redis?
+For **rate limiting**: an in-process counter would fail the moment you run two gateway instances — each instance would have an independent counter, meaning a client could send 2× the allowed requests by splitting traffic across instances. Redis atomic `INCR` with `EXPIRE` ensures the counter is shared across all instances, making rate limiting consistent regardless of horizontal scale.
 
-Used for caching frequently accessed responses to reduce latency and improve throughput.
+For **caching**: same reason. In-process cache is per-instance — a cache miss on one instance doesn't benefit from a hit on another. Redis as a shared cache means any instance can serve a cached response, reducing backend load at the gateway level rather than per-process.
 
-### Why Round-Robin Load Balancing?
-
-Simple and effective strategy for distributing requests evenly across service instances.
-
-### Why Circuit Breaker?
-
-Prevents repeated calls to failing services and improves overall system resilience.
+Single Redis instance handles both. Operationally simpler, and at this scale the trade-off is worth it.
 
 ---
 
-## What I Learned
+### Why FastAPI over Flask?
 
-* Designing an API Gateway architecture
-* Implementing authentication and rate limiting
-* Using Redis for performance optimization
-* Applying load balancing strategies
-* Building fault-tolerant backend systems
-* Structuring scalable microservice-based applications
+Two reasons that actually mattered for this project:
+
+First, FastAPI's async support. The gateway spends most of its time waiting — on Redis, on downstream services. Async handlers mean a single process can handle concurrent requests without blocking. Flask's synchronous model would require threads or a different WSGI setup to achieve the same.
+
+Second, automatic OpenAPI docs. Every route is documented at `/docs` without additional code. For a gateway with multiple route patterns, this made development and testing significantly faster.
+
+---
+
+### Why round-robin load balancing?
+
+Round-robin is stateless — no knowledge of service load, response times, or active connections required. For this project, where all service instances are identical and requests are roughly uniform, round-robin distributes load evenly without the complexity of weighted or least-connections balancing.
+
+The trade-off: round-robin doesn't account for slow instances. One instance handling a slow request still receives the next request in rotation. For production, least-connections would be more appropriate. This is noted as a future improvement.
+
+---
+
+### Why a circuit breaker?
+
+Without a circuit breaker, a failing downstream service causes every request to that service to hang until timeout — typically 30 seconds. Under load, this exhausts the gateway's connection pool and causes failures to cascade to other services.
+
+The circuit breaker tracks failure rate per service. After a threshold of consecutive failures, it opens — immediately returning an error instead of attempting the call. After a cooldown period, it moves to half-open and tests if the service has recovered.
+
+Result: a single failing service fails fast instead of degrading the entire gateway.
+
+---
+
+## Challenges and Trade-offs
+
+**Stateless JWT vs session management** — JWT authentication means the gateway doesn't need a session store, but token revocation before expiry isn't possible without a token blacklist. For this project, short expiry times are the mitigation. In production, a Redis-based blacklist would be the right approach.
+
+**Round-robin and slow instances** — discussed above. A slow instance continues receiving requests until the circuit breaker opens. Least-connections balancing would solve this at the cost of added complexity.
+
+**Single Redis instance** — both caching and rate limiting depend on Redis availability. If Redis goes down, rate limiting fails open (requests are allowed through) and cache responses are unavailable, increasing load on backend services. A Redis Sentinel or Cluster setup would address this for production.
 
 ---
 
 ## Future Improvements
 
-* Docker Compose setup for one-command deployment
-* Service discovery
-* API analytics and monitoring
-* Distributed tracing
-* Health checks and auto-recovery
-* Kubernetes deployment
+- Docker Compose for one-command startup of all services
+- Prometheus metrics endpoint for request counts, latency, and error rates
+- Distributed tracing with OpenTelemetry
+- Service discovery instead of hardcoded service URLs
+- Redis Sentinel for high availability
+- Kubernetes deployment manifests
 
 ---
 
-## Author
+## Tech Stack
 
-**Arcinth Siva**
-
-CSE (AI & ML) | Software Engineering & AI/ML Projects
+`Python` · `FastAPI` · `Redis` · `JWT` · `Docker` · `Uvicorn`
