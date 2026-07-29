@@ -1,0 +1,38 @@
+# Infrastructure only. gateway/config.py and gateway/utils/redis_client.py
+# still hardcode "localhost" for the upstream services and Redis (unchanged,
+# per modernization scope), so every service here runs with `network_mode:
+# host` to keep "localhost:<port>" resolving exactly as it does when the
+# services are run directly on the host. Host networking works as-is on
+# Linux; on Docker Desktop (macOS/Windows) it requires Docker Desktop 4.29+
+# with host networking enabled, or the services should be run natively
+# instead until routing is made container-network-aware in a later pass.
+
+services:
+  redis:
+    image: redis:7-alpine
+    network_mode: host
+
+  gateway:
+    build: .
+    command: uvicorn gateway.main:app --host 0.0.0.0 --port 8000
+    network_mode: host
+    depends_on:
+      - redis
+      - user-service
+      - user-service-2
+      - order-service
+
+  user-service:
+    build: .
+    command: uvicorn services.user_service:app --host 0.0.0.0 --port 8001
+    network_mode: host
+
+  order-service:
+    build: .
+    command: uvicorn services.order_service:app --host 0.0.0.0 --port 8002
+    network_mode: host
+
+  user-service-2:
+    build: .
+    command: uvicorn services.user_service_2:app --host 0.0.0.0 --port 8003
+    network_mode: host
