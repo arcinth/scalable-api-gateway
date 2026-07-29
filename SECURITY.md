@@ -12,10 +12,18 @@ Include a description of the issue, its impact, and steps to reproduce
 
 ## Current state
 
-This is a demo/learning-stage gateway with known, unfixed security gaps —
-most notably a hardcoded JWT secret, a `/login` endpoint that issues
-tokens without checking any credentials, and a middleware ordering bug
-that lets cached responses bypass auth. None of these have been patched
-yet; do not deploy this gateway with real data or credentials behind it.
-Fixes are tracked separately from repository/tooling changes — see
-`CHANGELOG.md`.
+This is a demo/learning-stage gateway. Do not deploy it with real data or
+credentials behind it. Known, unfixed gaps:
+
+- **JWT signing secret is hardcoded in source** (`gateway/main.py`,
+  `gateway/middleware/auth.py`). Environment-based config is planned but
+  not yet implemented.
+- **Cache middleware runs before auth** — a cached response for a given
+  URL can be served to a request with no valid token, since the cache
+  key doesn't include the caller's identity. Not yet fixed.
+- **No real user store** — `/login` now validates credentials (see
+  `CHANGELOG.md`), but against a single hardcoded in-memory demo user,
+  not a real user base.
+
+Fixes are tracked incrementally rather than all at once — see
+`CHANGELOG.md` for what's been addressed.

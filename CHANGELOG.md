@@ -4,7 +4,19 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Security
+- `POST /login` now validates credentials against an in-memory,
+  bcrypt-hashed credential store (`gateway/auth_store.py`) instead of
+  issuing a token unconditionally. Invalid credentials return `401`; a
+  malformed request body returns `422`. JWT issuance/validation logic is
+  unchanged (same secret, algorithm, expiry, and downstream middleware).
+- Added `tests/test_auth.py` covering the credential store, `/login`,
+  and `jwt_auth` middleware (9 tests).
+
 ### Added
+- `gateway/auth_store.py` — in-memory demo credential store (no
+  database; see README "Local login").
+- `bcrypt` runtime dependency (`requirements.txt`).
 - `.gitignore` (Python bytecode, `venv/`, `.env`).
 - `docs/`, `tests/`, `docker/`, `assets/` folders.
 - `.editorconfig`.
@@ -23,10 +35,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 18 committed `__pycache__/*.pyc` files (now git-ignored).
 
 ### Not changed
-No application code changed: authentication, routing, middleware order,
-caching, and load balancing are all as before, including known issues
-(hardcoded JWT secret, unauthenticated `/login`, cache middleware running
-before auth). Those are tracked as follow-up work.
+Routing, middleware order, caching, and load balancing are unchanged.
+Known unfixed issues: the JWT signing secret is still hardcoded in
+source (env-based config is a separate, not-yet-started pass), and the
+cache middleware still runs before `jwt_auth`, so a cached response can
+still be served without a valid token. See `SECURITY.md`.
 
 ## [0.0.0] — Initial
 

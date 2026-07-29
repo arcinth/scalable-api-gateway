@@ -5,8 +5,8 @@ caching, per-client rate limiting, and a simple circuit breaker, routing
 requests to two mock backend services (`user`, `order`).
 
 Pre-alpha: both backend services return static placeholder data, and
-several pieces described below (auth checks, config) have known gaps —
-see [`CHANGELOG.md`](CHANGELOG.md).
+several pieces described below (config, JWT secret handling) have known
+gaps — see [`CHANGELOG.md`](CHANGELOG.md) and [`SECURITY.md`](SECURITY.md).
 
 ## Architecture
 
@@ -68,9 +68,17 @@ Desktop caveat.
 ### Configuration
 
 Every value currently hardcoded in the app (JWT secret, Redis host, rate
-limits, etc.) is listed in [`.env.example`](.env.example) for reference.
-**None of it is read from the environment yet** — changing `.env` has no
-effect until a settings module is added.
+limits, demo login credentials, etc.) is listed in
+[`.env.example`](.env.example) for reference. **None of it is read from
+the environment yet** — changing `.env` has no effect until a settings
+module is added.
+
+### Local login
+
+There is no database — `gateway/auth_store.py` provides an
+`InMemoryUserStore` seeded with a single development user (bcrypt-hashed,
+reset on every restart). It exists to unblock local development only and
+is not a real user base; see `gateway/auth_store.py` for details.
 
 ## Development
 
@@ -85,8 +93,10 @@ test workflow.
 ## API
 
 - `GET /` — health check
-- `POST /login` — issues a JWT; does not check any credentials (accepts
-  no body, always returns a valid `admin` token)
+- `POST /login` — body `{"username": "...", "password": "..."}`;
+  returns `{"access_token": "..."}` on success, `401` on invalid
+  credentials, `422` on a malformed/missing body. See "Local login" above
+  for how development credentials are provisioned.
 - `{METHOD} /{service}/{path}` — proxied to the matching upstream service
   in `gateway/config.py`
 
