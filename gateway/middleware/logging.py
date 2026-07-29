@@ -1,5 +1,7 @@
-from fastapi import Request
 import time
+
+from fastapi import Request
+
 
 async def log_requests(request: Request, call_next):
     start_time = time.time()

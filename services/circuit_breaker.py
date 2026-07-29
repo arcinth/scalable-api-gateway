@@ -4,7 +4,7 @@ failure_count = {}
 last_failure_time = {}
 
 FAILURE_THRESHOLD = 3
-RECOVERY_TIME = 10  
+RECOVERY_TIME = 10
 
 
 def is_service_available(service_url):
