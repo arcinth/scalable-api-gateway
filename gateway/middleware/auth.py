@@ -6,8 +6,16 @@ from gateway.config import settings
 
 
 async def jwt_auth(request: Request, call_next):
-    # Allow health + docs + login
-    if request.url.path in ["/", "/docs", "/openapi.json", "/login"]:
+    # Allow health + docs + login + monitoring
+    if request.url.path in [
+        "/",
+        "/docs",
+        "/openapi.json",
+        "/login",
+        "/admin/stats",
+        "/dashboard",
+        "/admin/reset-stats",
+    ]:
         return await call_next(request)
 
     auth_header = request.headers.get("Authorization")

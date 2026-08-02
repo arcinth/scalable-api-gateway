@@ -9,6 +9,18 @@ request_log = {}
 
 
 async def rate_limiter(request: Request, call_next):
+    # Exempt health, login, docs, and monitoring routes from rate limiting
+    if request.url.path in [
+        "/",
+        "/docs",
+        "/openapi.json",
+        "/login",
+        "/admin/stats",
+        "/dashboard",
+        "/admin/reset-stats",
+    ]:
+        return await call_next(request)
+
     client_ip = request.client.host
     current_time = time.time()
 
