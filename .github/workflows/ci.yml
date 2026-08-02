@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, modernize-v2]
+  pull_request:
+    branches: [main, modernize-v2]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Black (format check)
+        run: black --check .
+
+      - name: isort (import order check)
+        run: isort --check-only .
+
+      - name: Run tests
+        run: pytest

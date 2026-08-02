@@ -1,0 +1,35 @@
+# Tool configuration only. This file intentionally does not declare
+# [project] packaging metadata — the application layout is unchanged
+# as part of this infrastructure-only pass.
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    venv
+  | \.venv
+  | __pycache__
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip = ["venv", ".venv"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+extend-exclude = ["venv", ".venv", "__pycache__"]
+
+[tool.ruff.lint]
+# Import sorting is handled by isort, not ruff, to avoid the two tools
+# fighting over the same concern.
+select = ["E", "F", "W", "B"]
+ignore = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
