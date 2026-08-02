@@ -2,8 +2,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 
-SECRET_KEY = "mysecretkey"
-ALGORITHM = "HS256"
+from gateway.config import settings
 
 
 async def jwt_auth(request: Request, call_next):
@@ -24,7 +23,9 @@ async def jwt_auth(request: Request, call_next):
                 status_code=401, content={"error": "Invalid auth scheme"}
             )
 
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.jwt_algorithm]
+        )
         request.state.user = payload
 
     except JWTError:

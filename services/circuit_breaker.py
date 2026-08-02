@@ -1,22 +1,21 @@
 import time
 
+from gateway.config import settings
+
 failure_count = {}
 last_failure_time = {}
-
-FAILURE_THRESHOLD = 3
-RECOVERY_TIME = 10
 
 
 def is_service_available(service_url):
     if service_url not in failure_count:
         return True
 
-    if failure_count[service_url] < FAILURE_THRESHOLD:
+    if failure_count[service_url] < settings.circuit_breaker_failure_threshold:
         return True
 
     elapsed = time.time() - last_failure_time[service_url]
 
-    if elapsed > RECOVERY_TIME:
+    if elapsed > settings.circuit_breaker_recovery_seconds:
         print("HALF-OPEN: Retrying service...")
         failure_count[service_url] = 0
         return True

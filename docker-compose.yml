@@ -1,11 +1,14 @@
-# Infrastructure only. gateway/config.py and gateway/utils/redis_client.py
-# still hardcode "localhost" for the upstream services and Redis (unchanged,
-# per modernization scope), so every service here runs with `network_mode:
-# host` to keep "localhost:<port>" resolving exactly as it does when the
-# services are run directly on the host. Host networking works as-is on
-# Linux; on Docker Desktop (macOS/Windows) it requires Docker Desktop 4.29+
-# with host networking enabled, or the services should be run natively
-# instead until routing is made container-network-aware in a later pass.
+# Infrastructure only. gateway/config.py now reads upstream/Redis hosts
+# from the environment (USER_SERVICE_URLS, ORDER_SERVICE_URLS,
+# REDIS_HOST, etc. — see .env.example), but this file doesn't set them,
+# so every service still defaults to "localhost" as if run directly on
+# the host. Every service here therefore runs with `network_mode: host`
+# to keep "localhost:<port>" resolving correctly between containers.
+# Host networking works as-is on Linux; on Docker Desktop (macOS/Windows)
+# it requires Docker Desktop 4.29+ with host networking enabled, or the
+# services should be run natively instead. A future pass could instead
+# set container-network hostnames via environment: and drop host
+# networking entirely.
 
 services:
   redis:

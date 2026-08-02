@@ -12,9 +12,7 @@ scheduled.
 
 import bcrypt
 
-# Seed password for the single development user this store ships with.
-# Not a real user base — see README "Local login".
-_DEMO_PASSWORD = b"ChangeMe123!"
+from gateway.config import settings
 
 
 class InMemoryUserStore:
@@ -26,7 +24,9 @@ class InMemoryUserStore:
 
     def __init__(self) -> None:
         self._users: dict[str, bytes] = {
-            "admin": bcrypt.hashpw(_DEMO_PASSWORD, bcrypt.gensalt()),
+            settings.demo_admin_username: bcrypt.hashpw(
+                settings.demo_admin_password.encode("utf-8"), bcrypt.gensalt()
+            ),
         }
 
     def verify_credentials(self, username: str, password: str) -> bool:

@@ -2,7 +2,7 @@ import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from gateway.config import ROUTES
+from gateway.config import settings
 from services.circuit_breaker import (
     is_service_available,
     record_failure,
@@ -18,10 +18,10 @@ load_balancer_index = {}
 @router.api_route("/{service}/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def gateway_handler(service: str, path: str, request: Request):
 
-    if service not in ROUTES:
+    if service not in settings.routes:
         return JSONResponse(status_code=404, content={"error": "Service not found"})
 
-    service_list = ROUTES[service]
+    service_list = settings.routes[service]
 
     if service not in load_balancer_index:
         load_balancer_index[service] = 0
